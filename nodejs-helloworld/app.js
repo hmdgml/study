@@ -1,11 +1,37 @@
-var express = require('express');
-app = express();
+var restify = require('restify');
 
-app.get('/', function (req, res) {
-  res.send('Hello World!');
+var controller = require('./controllers/items');
+
+var db = require('./models/db');
+var model = require('./models/items');
+
+model.connect(db.params, function(err) {
+    if (err) throw err;
 });
 
-app.listen(8080, function () {
-  console.log('Example app listening on port 8080!');
+var server = restify.createServer() 
+    .use(restify.fullResponse())
+    .use(restify.queryParser())
+    .use(restify.bodyParser());
+    
+controller.context(server, '/todo/api', model); 
+
+server.get(/\/todo\/?.*/, restify.serveStatic({
+    'directory': __dirname,
+    'default': 'index.html'
+}));
+
+var port = process.env.PORT || 30080;
+server.listen(port, function (err) {
+    if (err)
+        console.error(err);
+    else
+        console.log('App is ready at : ' + port);
 });
+ 
+if (process.env.environment == 'production')
+    process.on('uncaughtException', function (err) {
+        console.error(JSON.parse(JSON.stringify(err, ['stack', 'message', 'inner'], 2)))
+    });
+    
 
